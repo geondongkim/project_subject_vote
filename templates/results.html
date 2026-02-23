@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>투표 결과</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
             font-family: 'Noto Sans KR', sans-serif;
@@ -150,6 +151,37 @@
             color: #666;
             margin-top: 5px;
         }
+        .chart-section {
+            margin: 40px 0;
+        }
+        .chart-section h2 {
+            color: #333;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+            margin-bottom: 25px;
+        }
+        .chart-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            align-items: center;
+        }
+        .chart-wrapper {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+        }
+        .chart-title {
+            text-align: center;
+            font-size: 14px;
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 15px;
+        }
+        @media (max-width: 650px) {
+            .chart-grid { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
@@ -170,6 +202,21 @@
                 <div class="stat-item">
                     <div class="stat-value">{{ results[0][1] if results else 0 }}점</div>
                     <div class="stat-label">최고 점수</div>
+                </div>
+            </div>
+
+            <!-- 차트 섹션 -->
+            <div class="chart-section">
+                <h2>📈 점수 시각화</h2>
+                <div class="chart-grid">
+                    <div class="chart-wrapper">
+                        <div class="chart-title">주제별 총점 비교 (막대 차트)</div>
+                        <canvas id="barChart"></canvas>
+                    </div>
+                    <div class="chart-wrapper">
+                        <div class="chart-title">득표 비율 (도넛 차트)</div>
+                        <canvas id="doughnutChart"></canvas>
+                    </div>
                 </div>
             </div>
 
@@ -224,5 +271,99 @@
             <a href="{{ url_for('index') }}" class="back-link">🏠 메인으로 돌아가기</a>
         </div>
     </div>
+
+    {% if results %}
+    <script>
+        // Jinja2 데이터 → JavaScript 배열 변환
+        const rawLabels = {{ results | map(attribute=0) | list | tojson }};
+        const scores    = {{ results | map(attribute=1) | list | tojson }};
+
+        // 긴 주제명에서 발제자 이름만 추출 (예: "(김건동) 교통약자..." → "김건동")
+        const shortLabels = rawLabels.map(l => {
+            const match = l.match(/\(([^)]+)\)/);
+            return match ? match[1] : l.substring(0, 8);
+        });
+
+        // 색상 팔레트 (기존 디자인 시스템)
+        const palette = [
+            'rgba(102, 126, 234, 0.85)',
+            'rgba(118,  75, 162, 0.85)',
+            'rgba( 40, 167,  69, 0.85)',
+            'rgba(255, 193,   7, 0.85)',
+            'rgba(220,  53,  69, 0.85)',
+        ];
+        const borderPalette = palette.map(c => c.replace('0.85', '1'));
+
+        // ── 막대 차트 ──────────────────────────────────────
+        new Chart(document.getElementById('barChart'), {
+            type: 'bar',
+            data: {
+                labels: shortLabels,
+                datasets: [{
+                    label: '총점',
+                    data: scores,
+                    backgroundColor: palette,
+                    borderColor: borderPalette,
+                    borderWidth: 2,
+                    borderRadius: 6,
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            title: (items) => rawLabels[items[0].dataIndex],
+                            label:  (item)  => ` ${item.raw}점`
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1 },
+                        grid: { color: 'rgba(0,0,0,0.05)' }
+                    },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+
+        // ── 도넛 차트 ──────────────────────────────────────
+        new Chart(document.getElementById('doughnutChart'), {
+            type: 'doughnut',
+            data: {
+                labels: shortLabels,
+                datasets: [{
+                    data: scores,
+                    backgroundColor: palette,
+                    borderColor: '#fff',
+                    borderWidth: 3,
+                    hoverOffset: 10,
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { padding: 15, font: { size: 13 } }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: (items) => rawLabels[items[0].dataIndex],
+                            label:  (item)  => {
+                                const total = scores.reduce((a, b) => a + b, 0);
+                                const pct   = total > 0 ? ((item.raw / total) * 100).toFixed(1) : 0;
+                                return ` ${item.raw}점 (${pct}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+    {% endif %}
 </body>
 </html>

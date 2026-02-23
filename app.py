@@ -1,7 +1,29 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+import json
+import os
+import csv
+import io
+from flask import Flask, render_template, request, redirect, url_for, flash, session, Response
 
 app = Flask(__name__)
 app.secret_key = "secret_key_for_session"
+
+# 관리자 비밀번호 (변경 가능)
+ADMIN_PASSWORD = "admin1234"
+
+# 투표 데이터 저장 파일 경로
+VOTES_FILE = os.path.join(os.path.dirname(__file__), 'votes.json')
+
+def load_votes():
+    """파일에서 투표 데이터 로드 (서버 재시작 후에도 유지)"""
+    if os.path.exists(VOTES_FILE):
+        with open(VOTES_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return {}
+
+def save_votes(votes_data):
+    """투표 데이터를 파일에 저장"""
+    with open(VOTES_FILE, 'w', encoding='utf-8') as f:
+        json.dump(votes_data, f, ensure_ascii=False, indent=2)
 
 # 1. 데이터 설정 (실제 팀원 이름과 주제로 변경하세요)
 TEAM_MEMBERS = ["김건동", "지혜민", "박진희", "이찬혜", "강신석"]
@@ -10,12 +32,12 @@ TOPICS = {
     "지혜민": "(지혜민) 실시간 대기질 기반 스마트 환기 가이드 및 에너지 효율 분석 시스템",
     "박진희": "(박진희) 공공도서관 대출 데이터 기반 수요 예측 및 AI 대기기간 안내 시스템",
     "이찬혜": "(이찬혜) 공동주택별 분리수거 대행 서비스 수익성 및 환경 비용 시뮬레이션 플랫폼",
-    "강신석": "(강신석) 한국인들이 많이 가는 비수도권 관광지를 외국인에게 추천해주는 서비스"
+    "강신석": "(강신석) 서울시 구별, 전국 시/군별 대기질에 따른 러닝을 위한 대기질 등급 추천 서비스"
 }
 
 # 투표 결과 저장 (누가, 어떤 주제에, 몇 점을 줬는지)
 # 구조: { "투표자": { "주제명": 점수, ... } }
-votes = {}
+votes = load_votes()
 
 @app.route('/')
 def index():
@@ -46,8 +68,9 @@ def vote(voter_name):
             flash("오류: 반드시 1점, 3점, 5점을 각각 한 번씩 사용해야 합니다!")
             return redirect(url_for('vote', voter_name=voter_name))
 
-        # 투표 저장
+        # 투표 저장 (메모리 + 파일)
         votes[voter_name] = selected_scores
+        save_votes(votes)
         flash(f"{voter_name}님, 투표가 성공적으로 완료되었습니다!")
         return redirect(url_for('results'))
 
@@ -76,6 +99,69 @@ def results():
     # 내림차순 정렬
     sorted_results = sorted(total_scores.items(), key=lambda x: x[1], reverse=True)
     return render_template('results.html', results=sorted_results, detailed_votes=votes)
+
+# ────── 관리자 라우트 ──────
+
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    if request.method == 'POST':
+        if request.form.get('password') == ADMIN_PASSWORD:
+            session['is_admin'] = True
+            return redirect(url_for('admin'))
+        flash("비밀번호가 올바르지 않습니다.")
+    return render_template('admin_login.html')
+
+@app.route('/admin/logout')
+def admin_logout():
+    session.pop('is_admin', None)
+    return redirect(url_for('index'))
+
+@app.route('/admin')
+def admin():
+    if not session.get('is_admin'):
+        return redirect(url_for('admin_login'))
+    voted = list(votes.keys())
+    not_voted = [m for m in TEAM_MEMBERS if m not in votes]
+    return render_template('admin.html', votes=votes, voted=voted, not_voted=not_voted, topics=TOPICS, members=TEAM_MEMBERS)
+
+@app.route('/admin/reset', methods=['POST'])
+def admin_reset():
+    if not session.get('is_admin'):
+        return redirect(url_for('admin_login'))
+    global votes
+    votes = {}
+    save_votes(votes)
+    flash("모든 투표가 초기화되었습니다.")
+    return redirect(url_for('admin'))
+
+@app.route('/admin/export/csv')
+def admin_export_csv():
+    if not session.get('is_admin'):
+        return redirect(url_for('admin_login'))
+    topic_list = list(TOPICS.values())
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['투표자'] + topic_list)
+    for voter in TEAM_MEMBERS:
+        if voter in votes:
+            row = [voter] + [votes[voter].get(t, '-') for t in topic_list]
+            writer.writerow(row)
+    output.seek(0)
+    return Response(
+        output.getvalue(),
+        mimetype='text/csv; charset=utf-8-sig',
+        headers={"Content-Disposition": "attachment; filename=votes.csv"}
+    )
+
+@app.route('/admin/export/json')
+def admin_export_json():
+    if not session.get('is_admin'):
+        return redirect(url_for('admin_login'))
+    return Response(
+        json.dumps(votes, ensure_ascii=False, indent=2),
+        mimetype='application/json',
+        headers={"Content-Disposition": "attachment; filename=votes.json"}
+    )
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

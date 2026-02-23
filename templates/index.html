@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>프로젝트 주제 투표 시스템</title>
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            max-width: 600px;
+            width: 100%;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .member-list {
+            list-style: none;
+            padding: 0;
+        }
+        .member-item {
+            margin: 15px 0;
+        }
+        .member-link {
+            display: block;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .member-link:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .results-link {
+            display: block;
+            margin-top: 30px;
+            padding: 15px;
+            background: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        .results-link:hover {
+            background: #218838;
+        }
+        .info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            border-left: 4px solid #667eea;
+        }
+        .info p {
+            margin: 5px 0;
+            color: #555;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🗳️ 프로젝트 주제 투표</h1>
+        
+        <div class="info">
+            <p><strong>투표 방법:</strong></p>
+            <p>1. 본인 이름을 클릭하세요</p>
+            <p>2. 다른 팀원의 주제에 1점, 3점, 5점을 배분하세요</p>
+            <p>3. 각 점수는 한 번씩만 사용 가능합니다</p>
+        </div>
+
+        <ul class="member-list">
+            {% for member in members %}
+            <li class="member-item">
+                <a href="{{ url_for('vote', voter_name=member) }}" class="member-link">
+                    {{ member }}
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+
+        <a href="{{ url_for('results') }}" class="results-link">📊 투표 결과 보기</a>
+    </div>
+</body>
+</html>

@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>팀 프로젝트 주제 투표</title>
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .welcome {
+            text-align: center;
+            color: #667eea;
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 30px;
+        }
+        .instructions {
+            background: #f0f4ff;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            border-left: 5px solid #667eea;
+        }
+        .instructions h3 {
+            margin-top: 0;
+            color: #667eea;
+        }
+        .instructions ul {
+            margin: 10px 0;
+            padding-left: 25px;
+        }
+        .instructions li {
+            margin: 8px 0;
+            color: #555;
+        }
+        .score-tracker {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #fff3cd;
+            border-radius: 10px;
+            border: 2px solid #ffc107;
+        }
+        .score-badge {
+            text-align: center;
+            padding: 15px 25px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            min-width: 100px;
+        }
+        .score-badge.used {
+            background: #28a745;
+            color: white;
+        }
+        .score-badge .score-value {
+            font-size: 32px;
+            font-weight: bold;
+        }
+        .score-badge .score-label {
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        .topic-card {
+            background: #f8f9fa;
+            margin: 15px 0;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 5px solid #667eea;
+            transition: all 0.3s;
+        }
+        .topic-card:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .topic-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .topic-name {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            flex: 1;
+        }
+        .topic-owner {
+            color: #667eea;
+            font-size: 14px;
+            margin-left: 10px;
+        }
+        .score-select {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+        .score-select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .score-select.selected {
+            border-color: #28a745;
+            background: #f0fff4;
+        }
+        .submit-btn {
+            width: 100%;
+            padding: 18px;
+            margin-top: 30px;
+            font-size: 18px;
+            font-weight: bold;
+            color: white;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .submit-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .submit-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .alert {
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 12px 24px;
+            background: #6c757d;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: background 0.3s;
+        }
+        .back-link:hover {
+            background: #5a6268;
+        }
+        .validation-message {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 500;
+            display: none;
+        }
+        .validation-message.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🗳️ 투표하기</h1>
+        <div class="welcome">안녕하세요, {{ voter }}님!</div>
+
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            {% for message in messages %}
+              <div class="alert {% if '성공' in message or '완료' in message %}alert-success{% else %}alert-error{% endif %}">
+                {{ message }}
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <div class="instructions">
+            <h3>📌 투표 규칙</h3>
+            <ul>
+                <li>본인의 주제는 제외되었습니다</li>
+                <li>다른 팀원의 주제 중 <strong>3개</strong>를 선택하세요</li>
+                <li><strong>1점, 3점, 5점</strong>을 각각 <strong>한 번씩만</strong> 사용해야 합니다</li>
+                <li>점수를 중복 사용하거나 누락하면 제출할 수 없습니다</li>
+            </ul>
+        </div>
+
+        <div class="score-tracker" id="scoreTracker">
+            <div class="score-badge" id="badge-1">
+                <div class="score-value">1점</div>
+                <div class="score-label">미사용</div>
+            </div>
+            <div class="score-badge" id="badge-3">
+                <div class="score-value">3점</div>
+                <div class="score-label">미사용</div>
+            </div>
+            <div class="score-badge" id="badge-5">
+                <div class="score-value">5점</div>
+                <div class="score-label">미사용</div>
+            </div>
+        </div>
+
+        <div class="validation-message" id="validationMsg"></div>
+
+        <form method="POST" id="voteForm">
+            {% for owner, topic in topics.items() %}
+            <div class="topic-card">
+                <div class="topic-header">
+                    <span class="topic-name">{{ topic }}</span>
+                    <span class="topic-owner">발제자: {{ owner }}</span>
+                </div>
+                <select name="{{ topic }}" class="score-select" data-topic="{{ topic }}" title="점수 선택: {{ topic }}">
+                    <option value="0">선택 안함</option>
+                    <option value="1">1점</option>
+                    <option value="3">3점</option>
+                    <option value="5">5점</option>
+                </select>
+            </div>
+            {% endfor %}
+
+            <button type="submit" class="submit-btn" id="submitBtn">투표 제출</button>
+        </form>
+
+        <div style="text-align: center;">
+            <a href="{{ url_for('index') }}" class="back-link">← 뒤로 가기</a>
+        </div>
+    </div>
+
+    <script>
+        // 실시간 점수 검증 JavaScript
+        const selects = document.querySelectorAll('.score-select');
+        const submitBtn = document.getElementById('submitBtn');
+        const validationMsg = document.getElementById('validationMsg');
+        
+        function updateScoreTracker() {
+            const selectedScores = {};
+            
+            // 모든 선택된 점수 수집
+            selects.forEach(select => {
+                const value = select.value;
+                if (value !== '0') {
+                    if (!selectedScores[value]) {
+                        selectedScores[value] = 0;
+                    }
+                    selectedScores[value]++;
+                    select.classList.add('selected');
+                } else {
+                    select.classList.remove('selected');
+                }
+            });
+            
+            // 배지 업데이트
+            ['1', '3', '5'].forEach(score => {
+                const badge = document.getElementById(`badge-${score}`);
+                const count = selectedScores[score] || 0;
+                
+                if (count === 1) {
+                    badge.classList.add('used');
+                    badge.querySelector('.score-label').textContent = '사용됨 ✓';
+                } else if (count > 1) {
+                    badge.classList.remove('used');
+                    badge.style.background = '#dc3545';
+                    badge.style.color = 'white';
+                    badge.querySelector('.score-label').textContent = `중복! (${count}개)`;
+                } else {
+                    badge.classList.remove('used');
+                    badge.style.background = 'white';
+                    badge.style.color = 'inherit';
+                    badge.querySelector('.score-label').textContent = '미사용';
+                }
+            });
+            
+            // 검증 및 버튼 활성화/비활성화
+            const isValid = selectedScores['1'] === 1 && 
+                           selectedScores['3'] === 1 && 
+                           selectedScores['5'] === 1;
+            
+            submitBtn.disabled = !isValid;
+            
+            // 검증 메시지 표시
+            if (!isValid && (selectedScores['1'] || selectedScores['3'] || selectedScores['5'])) {
+                const messages = [];
+                if (!selectedScores['1']) messages.push('1점을 선택하세요');
+                if (selectedScores['1'] > 1) messages.push('1점이 중복되었습니다');
+                if (!selectedScores['3']) messages.push('3점을 선택하세요');
+                if (selectedScores['3'] > 1) messages.push('3점이 중복되었습니다');
+                if (!selectedScores['5']) messages.push('5점을 선택하세요');
+                if (selectedScores['5'] > 1) messages.push('5점이 중복되었습니다');
+                
+                validationMsg.textContent = '⚠️ ' + messages.join(' / ');
+                validationMsg.className = 'validation-message alert-warning show';
+            } else if (isValid) {
+                validationMsg.textContent = '✓ 완료! 투표를 제출할 수 있습니다';
+                validationMsg.className = 'validation-message alert-success show';
+            } else {
+                validationMsg.className = 'validation-message';
+            }
+        }
+        
+        // 모든 select에 이벤트 리스너 추가
+        selects.forEach(select => {
+            select.addEventListener('change', updateScoreTracker);
+        });
+        
+        // 폼 제출 시 최종 검증
+        document.getElementById('voteForm').addEventListener('submit', function(e) {
+            if (submitBtn.disabled) {
+                e.preventDefault();
+                alert('1점, 3점, 5점을 각각 한 번씩 선택해주세요!');
+            }
+        });
+        
+        // 초기 상태 업데이트
+        updateScoreTracker();
+    </script>
+</body>
+</html>

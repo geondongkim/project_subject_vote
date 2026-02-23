@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>투표 결과</title>
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .no-votes {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 18px;
+        }
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 40px;
+        }
+        .results-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: bold;
+        }
+        .results-table td {
+            padding: 15px;
+            border-bottom: 1px solid #ddd;
+        }
+        .results-table tr:hover {
+            background: #f8f9fa;
+        }
+        .rank {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+            width: 60px;
+            text-align: center;
+        }
+        .rank-1 { color: #FFD700; }
+        .rank-2 { color: #C0C0C0; }
+        .rank-3 { color: #CD7F32; }
+        .score {
+            font-size: 28px;
+            font-weight: bold;
+            color: #28a745;
+            text-align: center;
+        }
+        .topic-name {
+            font-size: 16px;
+            font-weight: 500;
+            color: #333;
+        }
+        .detailed-votes {
+            margin-top: 50px;
+        }
+        .detailed-votes h2 {
+            color: #333;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .voter-card {
+            background: #f8f9fa;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 10px;
+            border-left: 5px solid #667eea;
+        }
+        .voter-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        .vote-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #ddd;
+        }
+        .vote-item:last-child {
+            border-bottom: none;
+        }
+        .vote-topic {
+            flex: 1;
+            color: #555;
+        }
+        .vote-score {
+            font-weight: bold;
+            color: #28a745;
+            margin-left: 10px;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 30px;
+            padding: 15px 30px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: bold;
+            transition: background 0.3s;
+            text-align: center;
+        }
+        .back-link:hover {
+            background: #5568d3;
+        }
+        .trophy {
+            font-size: 30px;
+            margin-right: 10px;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 30px 0;
+            padding: 20px;
+            background: #f0f4ff;
+            border-radius: 10px;
+        }
+        .stat-item {
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .stat-label {
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 투표 결과</h1>
+
+        {% if results %}
+            <!-- 통계 요약 -->
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-value">{{ detailed_votes|length }}</div>
+                    <div class="stat-label">투표 참여자</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">{{ results|length }}</div>
+                    <div class="stat-label">후보 주제</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">{{ results[0][1] if results else 0 }}점</div>
+                    <div class="stat-label">최고 점수</div>
+                </div>
+            </div>
+
+            <!-- 순위표 -->
+            <table class="results-table">
+                <thead>
+                    <tr>
+                        <th style="width: 80px; text-align: center;">순위</th>
+                        <th>프로젝트 주제</th>
+                        <th style="width: 100px; text-align: center;">총점</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for topic, score in results %}
+                    <tr>
+                        <td class="rank rank-{{ loop.index if loop.index <= 3 else 'other' }}">
+                            {% if loop.index == 1 %}🥇{% elif loop.index == 2 %}🥈{% elif loop.index == 3 %}🥉{% else %}{{ loop.index }}{% endif %}
+                        </td>
+                        <td class="topic-name">{{ topic }}</td>
+                        <td class="score">{{ score }}점</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <!-- 상세 투표 내역 -->
+            {% if detailed_votes %}
+            <div class="detailed-votes">
+                <h2>📋 상세 투표 내역</h2>
+                {% for voter, choices in detailed_votes.items() %}
+                <div class="voter-card">
+                    <div class="voter-name">👤 {{ voter }}님의 투표</div>
+                    {% for topic, score in choices.items() %}
+                    <div class="vote-item">
+                        <span class="vote-topic">{{ topic }}</span>
+                        <span class="vote-score">{{ score }}점</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+        {% else %}
+            <div class="no-votes">
+                <p>🗳️ 아직 투표가 진행되지 않았습니다.</p>
+                <p>팀원들이 투표를 완료하면 결과가 여기에 표시됩니다.</p>
+            </div>
+        {% endif %}
+
+        <div style="text-align: center;">
+            <a href="{{ url_for('index') }}" class="back-link">🏠 메인으로 돌아가기</a>
+        </div>
+    </div>
+</body>
+</html>
